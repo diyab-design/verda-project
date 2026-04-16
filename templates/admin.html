@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — Verda</title>
+  <meta name="description" content="Verda admin dashboard — monitor product scans, authenticity, and manage registered products.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green-900: #0a2e0f;
+      --green-800: #1a4d21;
+      --green-700: #2e7d32;
+      --green-600: #388e3c;
+      --green-500: #4caf50;
+      --green-400: #66bb6a;
+      --surface:        rgba(255,255,255,0.06);
+      --surface-hover:  rgba(255,255,255,0.09);
+      --border:         rgba(255,255,255,0.10);
+      --text-primary:   #f1f8f2;
+      --text-muted:     #9dbfa0;
+      --gold:           #ffd54f;
+      --red:            #ef9a9a;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--green-900);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(46,125,50,0.30) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 90%, rgba(102,187,106,0.12) 0%, transparent 55%);
+      pointer-events: none;
+    }
+
+    /* Navbar */
+    
+    .navbar {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 32px;
+      background: rgba(10,46,15,0.90);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .navbar-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 1.1rem; font-weight: 700;
+      color: var(--text-primary); text-decoration: none;
+    }
+    .brand-leaf {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--green-500), var(--green-400));
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem;
+      box-shadow: 0 0 14px rgba(102,187,106,0.4);
+    }
+    .page-title {
+      font-size: 0.78rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1px;
+      color: var(--text-muted);
+      padding: 4px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      margin-left: 4px;
+    }
+    .nav-actions { display: flex; gap: 8px; align-items: center; }
+    .btn-nav {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.82rem; font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer; text-decoration: none;
+      transition: all 0.2s;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-primary);
+    }
+    .btn-nav:hover { background: var(--surface-hover); color: var(--green-400); border-color: var(--green-500); }
+    .btn-nav-danger { border-color: rgba(244,67,54,0.3); color: var(--red); }
+    .btn-nav-danger:hover { background: rgba(244,67,54,0.12); color: var(--red); border-color: rgba(244,67,54,0.5); }
+
+    /* Main */
+    .main {
+      position: relative; z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 36px 28px 80px;
+    }
+
+    /* Stat Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px 20px;
+      backdrop-filter: blur(10px);
+      transition: transform 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-2px); }
+    .stat-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+    }
+    .stat-icon.green { background: rgba(76,175,80,0.15); color: var(--green-400); }
+    .stat-icon.blue  { background: rgba(33,150,243,0.15); color: #90caf9; }
+    .stat-icon.gold  { background: rgba(249,168,37,0.15); color: var(--gold); }
+    .stat-icon.red   { background: rgba(244,67,54,0.15);  color: var(--red); }
+    .stat-value {
+      font-size: 2rem; font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .stat-value.green { color: var(--green-400); }
+    .stat-value.blue  { color: #90caf9; }
+    .stat-value.gold  { color: var(--gold); }
+    .stat-value.red   { color: var(--red); }
+    .stat-label {
+      font-size: 0.8rem; color: var(--text-muted); font-weight: 500;
+    }
+
+    /* Panels */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-title {
+      font-size: 0.95rem; font-weight: 700;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .panel-title i { color: var(--green-400); }
+    .panel-body { padding: 24px; }
+
+    /* Chart */
+    #scanChart { max-height: 260px; }
+
+    /* Export btn */
+    .btn-export {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px;
+      background: rgba(76,175,80,0.12);
+      color: var(--green-400);
+      border: 1px solid rgba(76,175,80,0.3);
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.82rem; font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-export:hover { background: rgba(76,175,80,0.2); color: var(--green-400); }
+
+    /* Table */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    .data-table thead th {
+      text-align: left;
+      padding: 10px 16px;
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.8px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table tbody tr {
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      transition: background 0.15s;
+    }
+    .data-table tbody tr:last-child { border-bottom: none; }
+    .data-table tbody tr:hover { background: var(--surface-hover); }
+    .data-table tbody td { padding: 13px 16px; vertical-align: middle; }
+    .pid-label {
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .qr-thumb { width: 44px; height: 44px; border-radius: 6px; background: white; padding: 3px; }
+
+    /* Status badges */
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 11px; border-radius: 100px;
+      font-size: 0.75rem; font-weight: 700;
+    }
+    .badge-authentic {
+      background: rgba(76,175,80,0.15); color: #81c784;
+      border: 1px solid rgba(76,175,80,0.25);
+    }
+    .badge-suspicious {
+      background: rgba(249,168,37,0.15); color: var(--gold);
+      border: 1px solid rgba(249,168,37,0.25);
+    }
+    .badge-fake {
+      background: rgba(244,67,54,0.15); color: var(--red);
+      border: 1px solid rgba(244,67,54,0.25);
+    }
+
+    /* Footer */
+    footer {
+      position: relative; z-index: 1;
+      text-align: center; padding: 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted); font-size: 0.8rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .navbar { padding: 12px 16px; }
+      .main { padding: 24px 16px 60px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .nav-actions .btn-nav span { display: none; }
+      .page-title { display: none; }
+    }
+    @media (max-width: 480px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <a href="/" class="navbar-brand">
+        <div class="brand-leaf">🌿</div>
+        Verda
+      </a>
+      <span class="page-title">Admin Dashboard</span>
+    </div>
+    <div class="nav-actions">
+      <a href="/blockchain" class="btn-nav">
+        <i class="bi bi-link-45deg"></i><span>Chain Explorer</span>
+      </a>
+      <a href="/add-product" class="btn-nav">
+        <i class="bi bi-plus-circle"></i><span>Add Product</span>
+      </a>
+      <a href="/print-qr" class="btn-nav">
+        <i class="bi bi-printer"></i><span>Print QR</span>
+      </a>
+      <a href="/pdf-report" class="btn-nav">
+        <i class="bi bi-file-earmark-pdf"></i><span>PDF Report</span>
+      </a>
+      <a href="/export" class="btn-nav">
+        <i class="bi bi-download"></i><span>Export CSV</span>
+      </a>
+      <a href="/" class="btn-nav">
+        <i class="bi bi-house"></i><span>Home</span>
+      </a>
+      <a href="/logout" class="btn-nav btn-nav-danger">
+        <i class="bi bi-box-arrow-right"></i><span>Logout</span>
+      </a>
+    </div>
+  </nav>
+
+  <div class="main">
+
+    <!-- Stat Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon green"><i class="bi bi-box-seam-fill"></i></div>
+        <div class="stat-value green">{{ products|length }}</div>
+        <div class="stat-label">Total Products</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon blue"><i class="bi bi-qr-code-scan"></i></div>
+        <div class="stat-value blue">{{ scans|sum(attribute='count') }}</div>
+        <div class="stat-label">Total Scans</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon gold"><i class="bi bi-exclamation-triangle-fill"></i></div>
+        <div class="stat-value gold">
+          {{ scans|selectattr('count', 'greaterthan', 4)|selectattr('count', 'lessthan', 15)|list|length }}
+        </div>
+        <div class="stat-label">Suspicious Items</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon red"><i class="bi bi-shield-x-fill"></i></div>
+        <div class="stat-value red">
+          {{ scans|selectattr('count', 'greaterthan', 14)|list|length }}
+        </div>
+        <div class="stat-label">Fake Detections</div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <i class="bi bi-bar-chart-fill"></i> Scan Frequency by Product
+        </div>
+      </div>
+      <div class="panel-body">
+        <canvas id="scanChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Scan Activity Table -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <i class="bi bi-activity"></i> Scan Activity
+        </div>
+        <a href="/export" class="btn-export">
+          <i class="bi bi-download"></i> Export CSV
+        </a>
+      </div>
+      <div class="panel-body" style="padding:0;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Product ID</th>
+              <th>Total Scans</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for scan in scans %}
+            <tr>
+              <td><span class="pid-label">{{ scan['product_id'] }}</span></td>
+              <td style="font-weight:600;">{{ scan['count'] }}</td>
+              <td>
+                {% if scan['count'] < 5 %}
+                  <span class="badge badge-authentic"><i class="bi bi-shield-check-fill"></i> Authentic</span>
+                {% elif scan['count'] < 15 %}
+                  <span class="badge badge-suspicious"><i class="bi bi-exclamation-triangle-fill"></i> Suspicious</span>
+                {% else %}
+                  <span class="badge badge-fake"><i class="bi bi-shield-x-fill"></i> Fake</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Registered Products -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <i class="bi bi-boxes"></i> Registered Products
+        </div>
+      </div>
+      <div class="panel-body" style="padding:0;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Product ID</th>
+              <th>Name</th>
+              <th>Category</th>
+              <th>QR Code</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for product in products %}
+            <tr>
+              <td><span class="pid-label">{{ product['product_id'] }}</span></td>
+              <td style="font-weight:500;">{{ product['name'] }}</td>
+              <td>
+                <span class="badge badge-authentic">{{ product['category'] }}</span>
+              </td>
+              <td>
+                <img src="/static/qrcodes/{{ product['product_id'] }}.png"
+                     class="qr-thumb" alt="{{ product['product_id'] }}">
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    🌿 <strong>Verda</strong> Admin Panel &copy; 2026 — Jain University
+  </footer>
+
+  <script>
+    fetch('/chart-data')
+      .then(res => res.json())
+      .then(data => {
+        const ctx = document.getElementById('scanChart').getContext('2d');
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: data.labels,
+            datasets: [{
+              label: 'Scans',
+              data: data.values,
+              backgroundColor: data.values.map(v =>
+                v < 5 ? 'rgba(102,187,106,0.7)' :
+                v < 15 ? 'rgba(255,213,79,0.7)' :
+                         'rgba(239,154,154,0.7)'
+              ),
+              borderColor: data.values.map(v =>
+                v < 5 ? '#66bb6a' : v < 15 ? '#ffd54f' : '#ef9a9a'
+              ),
+              borderWidth: 1,
+              borderRadius: 6,
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(10,46,15,0.95)',
+                borderColor: 'rgba(255,255,255,0.1)',
+                borderWidth: 1,
+                titleColor: '#f1f8f2',
+                bodyColor: '#9dbfa0',
+                padding: 10,
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { stepSize: 1, color: '#9dbfa0' },
+                grid: { color: 'rgba(255,255,255,0.05)' },
+              },
+              x: {
+                ticks: { color: '#9dbfa0', font: { family: 'Courier New' } },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      });
+  </script>
+
+</body>
+</html>

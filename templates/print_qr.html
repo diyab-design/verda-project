@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Print QR Codes — Verda</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green-900: #0a2e0f;
+      --green-700: #2e7d32;
+      --green-500: #4caf50;
+      --green-400: #66bb6a;
+      --surface:    rgba(255,255,255,0.06);
+      --border:     rgba(255,255,255,0.10);
+      --text-primary: #f1f8f2;
+      --text-muted:   #9dbfa0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--green-900);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(46,125,50,0.35) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 90%, rgba(102,187,106,0.15) 0%, transparent 55%);
+      pointer-events: none;
+    }
+
+    /* Navbar — no-print */
+    .navbar {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 32px;
+      background: rgba(10,46,15,0.90);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .navbar-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 1.1rem; font-weight: 700;
+      color: var(--text-primary); text-decoration: none;
+    }
+    .brand-leaf {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--green-500), var(--green-400));
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem;
+      box-shadow: 0 0 14px rgba(102,187,106,0.4);
+    }
+    .nav-actions { display: flex; gap: 10px; }
+    .btn-nav {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 18px;
+      border-radius: 8px;
+      font-size: 0.85rem; font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer; text-decoration: none;
+      transition: all 0.2s;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-primary);
+    }
+    .btn-nav:hover { background: rgba(255,255,255,0.1); color: var(--green-400); }
+    .btn-print {
+      background: linear-gradient(135deg, var(--green-700), var(--green-500));
+      border-color: transparent; color: white;
+      box-shadow: 0 6px 18px rgba(76,175,80,0.35);
+    }
+    .btn-print:hover { box-shadow: 0 10px 28px rgba(76,175,80,0.55); transform: translateY(-1px); color: white; }
+
+    /* Main */
+    .main {
+      position: relative; z-index: 1;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 36px 28px 80px;
+    }
+
+    .page-heading {
+      margin-bottom: 28px;
+    }
+    .page-heading h1 {
+      font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+    .page-heading p { font-size: 0.88rem; color: var(--text-muted); }
+
+    /* QR Grid */
+    .qr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 16px;
+    }
+    .qr-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 14px 16px;
+      text-align: center;
+      backdrop-filter: blur(10px);
+      transition: transform 0.2s;
+    }
+    .qr-card:hover { transform: translateY(-4px); }
+    .qr-card img {
+      width: 120px; height: 120px;
+      border-radius: 8px;
+      background: white;
+      padding: 6px;
+      object-fit: contain;
+      margin-bottom: 12px;
+    }
+    .qr-name {
+      font-weight: 700; font-size: 0.82rem;
+      color: var(--text-primary); margin-bottom: 4px;
+    }
+    .qr-id {
+      font-size: 0.72rem; color: var(--text-muted);
+      font-family: 'Courier New', monospace;
+    }
+
+    /* Print styles */
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white; color: black; }
+      body::before { display: none; }
+      .main { padding: 16px; }
+      .qr-card {
+        background: white; border: 1px solid #ddd;
+        border-radius: 8px; break-inside: avoid;
+      }
+      .qr-name { color: #111; }
+      .qr-id   { color: #555; }
+      .qr-grid { gap: 10px; }
+    }
+
+    @media (max-width: 480px) {
+      .navbar { padding: 12px 16px; }
+      .main { padding: 24px 16px 60px; }
+      .qr-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar no-print">
+    <a href="/" class="navbar-brand">
+      <div class="brand-leaf">🌿</div>
+      Verda
+    </a>
+    <div class="nav-actions">
+      <a href="/admin" class="btn-nav">
+        <i class="bi bi-arrow-left"></i> Back
+      </a>
+      <button onclick="window.print()" class="btn-nav btn-print">
+        <i class="bi bi-printer-fill"></i> Print All
+      </button>
+    </div>
+  </nav>
+
+  <div class="main">
+    <div class="page-heading no-print">
+      <h1>Batch QR Print</h1>
+      <p>Print all product QR codes for labelling or packaging.</p>
+    </div>
+
+    <div class="qr-grid">
+      {% for pid, name in products %}
+      <div class="qr-card">
+        <img src="/static/qrcodes/{{ pid }}.png" alt="{{ pid }}">
+        <div class="qr-name">{{ name }}</div>
+        <div class="qr-id">{{ pid }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verification Result — Verda</title>
+  <meta name="description" content="Blockchain-backed product authenticity verification result for Verda.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green-900: #0a2e0f;
+      --green-700: #2e7d32;
+      --green-500: #4caf50;
+      --green-400: #66bb6a;
+      --surface:    rgba(255,255,255,0.06);
+      --surface2:   rgba(255,255,255,0.04);
+      --border:     rgba(255,255,255,0.10);
+      --text-primary: #f1f8f2;
+      --text-muted:   #9dbfa0;
+      --mono: 'JetBrains Mono', 'Courier New', monospace;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--green-900);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(46,125,50,0.30) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 90%, rgba(102,187,106,0.12) 0%, transparent 55%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* Navbar */
+    .navbar {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 32px;
+      background: rgba(10,46,15,0.90);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .navbar-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 1.1rem; font-weight: 700;
+      text-decoration: none; color: var(--text-primary);
+    }
+    .brand-leaf {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--green-500), var(--green-400));
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem;
+      box-shadow: 0 0 14px rgba(102,187,106,0.35);
+    }
+    .btn-back {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px;
+      background: var(--surface); color: var(--text-primary);
+      border: 1px solid var(--border); border-radius: 8px;
+      font-size: 0.85rem; font-weight: 600;
+      text-decoration: none; transition: all 0.2s;
+    }
+    .btn-back:hover { background: rgba(255,255,255,0.1); color: var(--green-400); }
+
+    /* Main */
+    .main {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 48px 24px 80px;
+      gap: 20px;
+    }
+
+    /* Result Card */
+    .result-card {
+      width: 100%; max-width: 540px;
+      border-radius: 22px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      backdrop-filter: blur(20px);
+      overflow: hidden;
+      animation: slideUp 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(32px) scale(0.96); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Status Header */
+    .status-header {
+      padding: 38px 32px 30px;
+      text-align: center;
+    }
+    .status-header.authentic {
+      background: linear-gradient(145deg, rgba(46,125,50,0.4), rgba(76,175,80,0.12));
+      border-bottom: 1px solid rgba(76,175,80,0.2);
+    }
+    .status-header.suspicious {
+      background: linear-gradient(145deg, rgba(249,168,37,0.28), rgba(255,193,7,0.06));
+      border-bottom: 1px solid rgba(249,168,37,0.25);
+    }
+    .status-header.fake {
+      background: linear-gradient(145deg, rgba(198,40,40,0.35), rgba(244,67,54,0.06));
+      border-bottom: 1px solid rgba(244,67,54,0.22);
+    }
+
+    .status-icon-wrap {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.2rem;
+      margin: 0 auto 20px;
+      animation: popIn 0.5s 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    @keyframes popIn {
+      from { transform: scale(0.5); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+    .authentic  .status-icon-wrap { background: rgba(76,175,80,0.18); border: 2px solid rgba(76,175,80,0.4); box-shadow: 0 0 28px rgba(76,175,80,0.25); }
+    .suspicious .status-icon-wrap { background: rgba(249,168,37,0.18); border: 2px solid rgba(249,168,37,0.4); box-shadow: 0 0 28px rgba(249,168,37,0.20); }
+    .fake       .status-icon-wrap { background: rgba(244,67,54,0.18);  border: 2px solid rgba(244,67,54,0.4);  box-shadow: 0 0 28px rgba(244,67,54,0.20); }
+
+    .status-title {
+      font-size: 1.65rem; font-weight: 800;
+      letter-spacing: -0.5px; margin-bottom: 8px;
+    }
+    .authentic  .status-title { color: #81c784; }
+    .suspicious .status-title { color: #ffd54f; }
+    .fake       .status-title { color: #ef9a9a; }
+
+    .status-reason {
+      font-size: 0.88rem; color: var(--text-muted);
+      line-height: 1.6;
+      padding: 10px 16px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 8px;
+      margin-top: 12px;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+    }
+
+    /* Product image */
+    .product-image-wrap {
+      display: flex; justify-content: center;
+      padding: 20px 32px 0;
+    }
+    .product-image-wrap img {
+      width: 110px; height: 110px;
+      object-fit: cover; border-radius: 14px;
+      border: 2px solid rgba(76,175,80,0.35);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    /* Details */
+    .details-section { padding: 24px 32px; }
+    .details-label {
+      font-size: 0.7rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.4px;
+      color: var(--text-muted); margin-bottom: 14px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .detail-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.88rem;
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-key { color: var(--text-muted); font-weight: 500; }
+    .detail-val { font-weight: 600; color: var(--text-primary); text-align: right; max-width: 60%; }
+
+    /* Divider */
+    .divider { height: 1px; background: var(--border); }
+
+    /* Blockchain Proof Panel */
+    .bc-panel {
+      padding: 24px 32px;
+      animation: slideUp 0.5s 0.15s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    .bc-panel-header {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.7rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.4px;
+      color: var(--text-muted); margin-bottom: 14px;
+    }
+    .bc-row {
+      display: flex; flex-direction: column;
+      gap: 3px; padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .bc-row:last-child { border-bottom: none; }
+    .bc-key {
+      font-size: 0.72rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.8px;
+      color: var(--text-muted);
+    }
+    .bc-val {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--green-400);
+      word-break: break-all;
+      line-height: 1.5;
+    }
+    .bc-val.muted { color: var(--text-muted); font-family: 'Inter', sans-serif; font-size: 0.85rem; }
+    .hash-short {
+      display: inline-block;
+      background: rgba(102,187,106,0.1);
+      border: 1px solid rgba(102,187,106,0.2);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--green-400);
+      letter-spacing: 0.5px;
+    }
+    .hash-short.red {
+      background: rgba(244,67,54,0.1);
+      border-color: rgba(244,67,54,0.25);
+      color: #ef9a9a;
+    }
+    .velocity-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 10px; margin-top: 16px;
+    }
+    .velocity-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 10px;
+      text-align: center;
+    }
+    .velocity-num {
+      font-size: 1.4rem; font-weight: 800;
+      line-height: 1;
+    }
+    .velocity-num.ok   { color: var(--green-400); }
+    .velocity-num.warn { color: #ffd54f; }
+    .velocity-num.bad  { color: #ef9a9a; }
+    .velocity-label { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; }
+
+    /* CTAs */
+    .cta-section { padding: 20px 32px 28px; display: flex; gap: 12px; }
+    .btn-primary {
+      flex: 1;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 13px;
+      background: linear-gradient(135deg, var(--green-700), var(--green-500));
+      color: white; font-family: 'Inter', sans-serif;
+      font-size: 0.88rem; font-weight: 700;
+      border: none; border-radius: 10px; cursor: pointer;
+      text-decoration: none;
+      box-shadow: 0 6px 18px rgba(76,175,80,0.3);
+      transition: all 0.25s;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(76,175,80,0.5); color: white; }
+    .btn-secondary {
+      flex: 1;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 13px;
+      background: var(--surface); color: var(--text-muted);
+      font-family: 'Inter', sans-serif; font-size: 0.88rem; font-weight: 600;
+      border: 1px solid var(--border); border-radius: 10px;
+      text-decoration: none; transition: all 0.2s;
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+
+    /* Fake warning banner */
+    .fake-banner {
+      width: 100%; max-width: 540px;
+      background: rgba(198,40,40,0.15);
+      border: 1px solid rgba(244,67,54,0.3);
+      border-radius: 14px;
+      padding: 16px 20px;
+      display: flex; gap: 14px; align-items: flex-start;
+      animation: slideUp 0.5s 0.2s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    .fake-banner-icon { font-size: 1.4rem; line-height: 1; flex-shrink: 0; }
+    .fake-banner-text h4 { font-size: 0.88rem; font-weight: 700; color: #ef9a9a; margin-bottom: 4px; }
+    .fake-banner-text p  { font-size: 0.82rem; color: rgba(239,154,154,0.75); line-height: 1.5; }
+
+    .authentic-banner {
+      width: 100%; max-width: 540px;
+      background: rgba(46,125,50,0.15);
+      border: 1px solid rgba(76,175,80,0.3);
+      border-radius: 14px;
+      padding: 16px 20px;
+      display: flex; gap: 14px; align-items: flex-start;
+      animation: slideUp 0.5s 0.2s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    .authentic-banner-icon { font-size: 1.4rem; line-height: 1; flex-shrink: 0; }
+    .authentic-banner-text h4 { font-size: 0.88rem; font-weight: 700; color: #81c784; margin-bottom: 4px; }
+    .authentic-banner-text p  { font-size: 0.82rem; color: rgba(129,199,132,0.75); line-height: 1.5; }
+
+    @media (max-width: 480px) {
+      .navbar { padding: 12px 16px; }
+      .main { padding: 28px 12px 60px; gap: 14px; }
+      .status-header, .details-section, .bc-panel { padding-left: 20px; padding-right: 20px; }
+      .cta-section { flex-direction: column; padding: 16px 20px 24px; }
+      .velocity-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">
+      <div class="brand-leaf">🌿</div>
+      Verda
+    </a>
+    <a href="/" class="btn-back">
+      <i class="bi bi-arrow-left"></i> Home
+    </a>
+  </nav>
+
+  <div class="main">
+
+    <!-- ── STATUS CARD ── -->
+    <div class="result-card">
+
+      <!-- Status Header -->
+      {% if status == "Authentic" %}
+      <div class="status-header authentic">
+        <div class="status-icon-wrap">✅</div>
+        <div class="status-title">Authentic Product</div>
+        <div class="status-reason">{{ reason }}</div>
+      </div>
+      {% elif status == "Suspicious" %}
+      <div class="status-header suspicious">
+        <div class="status-icon-wrap">⚠️</div>
+        <div class="status-title">Suspicious Activity</div>
+        <div class="status-reason">{{ reason }}</div>
+      </div>
+      {% else %}
+      <div class="status-header fake">
+        <div class="status-icon-wrap">❌</div>
+        <div class="status-title">Fake / Not Verified</div>
+        <div class="status-reason">{{ reason }}</div>
+      </div>
+      {% endif %}
+
+      <!-- Product Image -->
+      {% if product and product['image'] %}
+      <div class="product-image-wrap">
+        <img src="/static/product_images/{{ product['image'] }}"
+             alt="{{ product['name'] if product else 'Product' }}">
+      </div>
+      {% endif %}
+
+      <!-- Product Details -->
+      {% if product %}
+      <div class="details-section">
+        <div class="details-label"><i class="bi bi-box-seam-fill"></i> Product Details</div>
+        <div class="detail-row">
+          <span class="detail-key">Product ID</span>
+          <span class="detail-val" style="font-family:var(--mono); font-size:0.82rem;">{{ pid }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">Name</span>
+          <span class="detail-val">{{ product['name'] }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">Category</span>
+          <span class="detail-val">{{ product['category'] }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">Verdict</span>
+          <span class="detail-val">
+            {% if status == "Authentic" %}<span style="color:#81c784; font-weight:700;">✅ Authentic</span>
+            {% elif status == "Suspicious" %}<span style="color:#ffd54f; font-weight:700;">⚠️ Suspicious</span>
+            {% else %}<span style="color:#ef9a9a; font-weight:700;">❌ Fake</span>
+            {% endif %}
+          </span>
+        </div>
+      </div>
+      {% else %}
+      <div class="details-section">
+        <div style="padding: 8px 0; color: #ef9a9a; font-size: 0.9rem;">
+          <i class="bi bi-exclamation-circle" style="margin-right:8px;"></i>
+          Product ID <strong>{{ pid }}</strong> is not in the database.
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="divider"></div>
+
+      <!-- ── BLOCKCHAIN PROOF PANEL ── -->
+      <div class="bc-panel">
+        <div class="bc-panel-header">
+          <i class="bi bi-link-45deg" style="font-size:1rem;color:var(--green-400);"></i>
+          Blockchain Proof
+        </div>
+
+        {% if bc and bc.found %}
+        <div class="bc-row">
+          <div class="bc-key">Block Index</div>
+          <div class="bc-val muted"># {{ bc.block_index }}</div>
+        </div>
+        <div class="bc-row">
+          <div class="bc-key">Block Hash</div>
+          <div class="bc-val">{{ bc.block_hash[:32] }}…</div>
+        </div>
+        <div class="bc-row">
+          <div class="bc-key">Previous Hash</div>
+          <div class="bc-val" style="color:rgba(157,191,160,0.6);">{{ bc.previous_hash[:32] }}…</div>
+        </div>
+        <div class="bc-row">
+          <div class="bc-key">Registered At</div>
+          <div class="bc-val muted">{{ bc.registered_at[:19] if bc.registered_at else "—" }}</div>
+        </div>
+        <div class="bc-row">
+          <div class="bc-key">Hash Integrity</div>
+          <div class="bc-val">
+            {% if bc.valid %}
+              <span class="hash-short">✔ Hash Verified</span>
+            {% else %}
+              <span class="hash-short red">✘ Hash Mismatch!</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="bc-row">
+          <div class="bc-key">Chain Status</div>
+          <div class="bc-val">
+            {% if bc.chain_valid %}
+              <span class="hash-short">⛓ Chain Intact ({{ bc.chain_length }} blocks)</span>
+            {% else %}
+              <span class="hash-short red">⛓ Chain Broken!</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Scan Velocity -->
+        <div style="margin-top:18px;">
+          <div class="bc-key" style="margin-bottom:8px;">Scan Velocity Detection</div>
+          <div class="velocity-grid" id="velocity-grid">
+            <!-- Loaded by JS from /api/verify -->
+            <div class="velocity-box">
+              <div class="velocity-num ok" id="v-total">—</div>
+              <div class="velocity-label">Total Scans</div>
+            </div>
+            <div class="velocity-box">
+              <div class="velocity-num ok" id="v-hour">—</div>
+              <div class="velocity-label">Last Hour</div>
+            </div>
+            <div class="velocity-box">
+              <div class="velocity-num ok" id="v-rapid">—</div>
+              <div class="velocity-label">Last 5 min</div>
+            </div>
+          </div>
+        </div>
+
+        {% else %}
+        <div style="color:#ef9a9a; font-size:0.88rem; padding:12px 0;">
+          <i class="bi bi-x-circle-fill" style="margin-right:6px;"></i>
+          Product ID <strong>{{ pid }}</strong> is not registered on the Verda blockchain.
+          This QR code may be counterfeit.
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- CTAs -->
+      <div class="cta-section">
+        <a href="/upload-scan" class="btn-primary" id="scan-another-btn">
+          <i class="bi bi-qr-code-scan"></i> Scan Another
+        </a>
+        <a href="/blockchain" class="btn-secondary" id="explorer-btn">
+          <i class="bi bi-link-45deg"></i> Chain Explorer
+        </a>
+      </div>
+    </div>
+
+    <!-- ── CONTEXTUAL BANNER ── -->
+    {% if status == "Fake" %}
+    <div class="fake-banner">
+      <div class="fake-banner-icon">🚨</div>
+      <div class="fake-banner-text">
+        <h4>Counterfeit Alert</h4>
+        <p>Do not purchase this product. Report it to the seller or contact Verda support. Counterfeit products may be unsafe or ineffective.</p>
+      </div>
+    </div>
+    {% elif status == "Authentic" %}
+    <div class="authentic-banner">
+      <div class="authentic-banner-icon">🛡️</div>
+      <div class="authentic-banner-text">
+        <h4>Blockchain Certified</h4>
+        <p>This product's identity is secured by the Verda blockchain. Every scan is logged and monitored for anomalies.</p>
+      </div>
+    </div>
+    {% endif %}
+
+  </div><!-- /main -->
+
+  <script>
+    // Load velocity data from API
+    const pid = "{{ pid }}";
+    fetch(`/api/verify/${pid}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.velocity) return;
+        const v = data.velocity;
+        const setNum = (id, val, threshWarn, threshBad) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.textContent = val;
+          if (val >= threshBad)       el.className = 'velocity-num bad';
+          else if (val >= threshWarn) el.className = 'velocity-num warn';
+          else                         el.className = 'velocity-num ok';
+        };
+        setNum('v-total', v.total,   20, 50);
+        setNum('v-hour',  v.last_hour, 5, 10);
+        setNum('v-rapid', v.last_5min, 3, 5);
+      })
+      .catch(() => {});
+  </script>
+
+</body>
+</html>

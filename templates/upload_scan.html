@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scan Product QR — Verda</title>
+  <meta name="description" content="Upload or capture a product QR code image to verify its blockchain authenticity with Verda.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <!-- jsQR: decode QR code from image in-browser -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green-900: #071a0a;
+      --green-800: #0d2e12;
+      --green-700: #2e7d32;
+      --green-600: #388e3c;
+      --green-500: #4caf50;
+      --green-400: #66bb6a;
+      --green-300: #a5d6a7;
+      --accent:    #00e5ff;
+      --gold:      #ffd54f;
+      --red:       #ef5350;
+      --surface:   rgba(255,255,255,0.055);
+      --surface2:  rgba(255,255,255,0.035);
+      --border:    rgba(255,255,255,0.09);
+      --border-g:  rgba(76,175,80,0.3);
+      --text-primary: #eef8ef;
+      --text-muted:   #7eab81;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--green-900);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Background mesh ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background:
+        radial-gradient(ellipse 90% 70% at 15% 5%,  rgba(46,125,50,0.40) 0%, transparent 55%),
+        radial-gradient(ellipse 60% 50% at 85% 85%, rgba(0,229,255,0.06) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 40% at 50% 50%, rgba(76,175,80,0.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    /* ── Particle dots ── */
+    body::after {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        radial-gradient(circle, rgba(76,175,80,0.18) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black, transparent);
+    }
+
+    /* ── Navbar ── */
+    .navbar {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 32px;
+      background: rgba(7,26,10,0.88);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .navbar-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 1.1rem; font-weight: 800;
+      color: var(--text-primary); text-decoration: none;
+      letter-spacing: -0.3px;
+    }
+    .brand-leaf {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, var(--green-600), var(--green-400));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      box-shadow: 0 0 20px rgba(102,187,106,0.45);
+    }
+    .nav-right { display: flex; gap: 10px; align-items: center; }
+    .btn-nav {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: 8px;
+      font-size: 0.84rem; font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer; text-decoration: none;
+      transition: all 0.2s;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-primary);
+    }
+    .btn-nav:hover { background: rgba(255,255,255,0.10); color: var(--green-400); border-color: var(--green-500); }
+
+    /* ── Main layout ── */
+    .main {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 52px 24px 100px;
+      gap: 28px;
+    }
+
+    /* ── Header ── */
+    .page-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(76,175,80,0.10);
+      border: 1px solid rgba(76,175,80,0.28);
+      color: var(--green-400);
+      padding: 6px 18px; border-radius: 100px;
+      font-size: 0.76rem; font-weight: 700;
+      letter-spacing: 0.8px; text-transform: uppercase;
+    }
+    .page-badge .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green-400);
+      animation: blink 1.4s ease-in-out infinite;
+    }
+    @keyframes blink {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0.25; }
+    }
+
+    h1 {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 800; letter-spacing: -1px;
+      text-align: center; line-height: 1.1;
+      background: linear-gradient(135deg, #fff 35%, var(--green-300) 80%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle {
+      font-size: 0.93rem; color: var(--text-muted);
+      text-align: center; max-width: 440px; line-height: 1.65;
+    }
+
+    /* ── Tab switcher ── */
+    .tab-bar {
+      display: flex; gap: 4px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px; padding: 4px;
+      width: 100%; max-width: 460px;
+    }
+    .tab-btn {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
+      padding: 10px 16px; border-radius: 9px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.84rem; font-weight: 600;
+      cursor: pointer; border: none;
+      transition: all 0.25s;
+      color: var(--text-muted);
+      background: transparent;
+    }
+    .tab-btn.active {
+      background: linear-gradient(135deg, var(--green-700), var(--green-600));
+      color: white;
+      box-shadow: 0 4px 14px rgba(46,125,50,0.45);
+    }
+    .tab-btn:not(.active):hover { color: var(--green-400); }
+
+    /* ── Panels ── */
+    .panel { display: none; width: 100%; max-width: 520px; }
+    .panel.active { display: flex; flex-direction: column; gap: 20px; }
+
+    /* ── Upload zone ── */
+    .upload-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      backdrop-filter: blur(18px);
+      overflow: hidden;
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--border-g);
+      border-radius: 16px;
+      margin: 20px;
+      padding: 48px 24px;
+      display: flex; flex-direction: column; align-items: center;
+      gap: 14px; cursor: pointer;
+      transition: all 0.3s;
+      text-align: center;
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.dragging {
+      border-color: var(--green-500);
+      background: rgba(76,175,80,0.06);
+    }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer;
+    }
+    .drop-icon {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, rgba(46,125,50,0.25), rgba(76,175,80,0.12));
+      border: 1px solid var(--border-g);
+      border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.9rem;
+      transition: transform 0.3s;
+    }
+    .drop-zone:hover .drop-icon { transform: translateY(-3px); }
+    .drop-title {
+      font-size: 1rem; font-weight: 700; color: var(--text-primary);
+    }
+    .drop-sub {
+      font-size: 0.82rem; color: var(--text-muted); line-height: 1.5;
+    }
+    .drop-browse {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 20px;
+      background: var(--surface2);
+      border: 1px solid var(--border-g);
+      border-radius: 8px;
+      font-size: 0.82rem; font-weight: 600;
+      color: var(--green-400);
+      pointer-events: none;
+    }
+
+    /* ── Preview + result ── */
+    .preview-wrap {
+      display: none;
+      flex-direction: column; align-items: center;
+      gap: 16px;
+      padding: 20px;
+    }
+    .preview-img {
+      width: 220px; height: 220px;
+      object-fit: contain;
+      border-radius: 14px;
+      border: 2px solid var(--border-g);
+      background: rgba(0,0,0,0.4);
+      padding: 8px;
+    }
+
+    /* ── Scan animation overlay ── */
+    .scan-anim-wrap {
+      display: none;
+      flex-direction: column; align-items: center; gap: 14px;
+      padding: 36px 20px;
+    }
+    .scan-rings {
+      position: relative; width: 90px; height: 90px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ring {
+      position: absolute; border-radius: 50%;
+      border: 2px solid var(--green-500);
+      animation: ringPulse 1.5s ease-out infinite;
+    }
+    .ring:nth-child(1) { width: 90px; height: 90px; animation-delay: 0s; }
+    .ring:nth-child(2) { width: 65px; height: 65px; animation-delay: 0.4s; }
+    .ring:nth-child(3) { width: 40px; height: 40px; animation-delay: 0.8s; }
+    @keyframes ringPulse {
+      0%   { opacity: 0.8; transform: scale(0.6); }
+      100% { opacity: 0;   transform: scale(1.3); }
+    }
+    .scan-center-icon {
+      font-size: 1.6rem; z-index: 1;
+      animation: scanSpin 2s linear infinite;
+    }
+    @keyframes scanSpin {
+      0%   { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .scan-anim-text {
+      font-size: 0.88rem; color: var(--text-muted);
+      font-weight: 500; letter-spacing: 0.3px;
+    }
+    .scan-steps { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 260px; }
+    .step-item {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 0.81rem; color: var(--text-muted);
+      transition: color 0.3s;
+    }
+    .step-item.active { color: var(--green-400); font-weight: 600; }
+    .step-item.done   { color: var(--green-300); }
+    .step-dot {
+      width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+      border: 1.5px solid currentColor;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem;
+    }
+    .step-item.done .step-dot::before { content: '✓'; }
+
+    /* ── Inline result ── */
+    .inline-result {
+      display: none;
+      margin: 0 20px 20px;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      animation: slideUp 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(24px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .result-header {
+      padding: 22px 24px 18px; text-align: center;
+    }
+    .result-header.authentic { background: linear-gradient(145deg, rgba(46,125,50,0.45), rgba(76,175,80,0.1)); border-bottom: 1px solid rgba(76,175,80,0.2); }
+    .result-header.suspicious { background: linear-gradient(145deg, rgba(249,168,37,0.3), rgba(255,193,7,0.06)); border-bottom: 1px solid rgba(249,168,37,0.25); }
+    .result-header.fake { background: linear-gradient(145deg, rgba(198,40,40,0.4), rgba(244,67,54,0.06)); border-bottom: 1px solid rgba(244,67,54,0.25); }
+
+    .result-icon { font-size: 2.8rem; line-height: 1; margin-bottom: 10px; }
+    .result-title { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.3px; }
+    .authentic  .result-title { color: #81c784; }
+    .suspicious .result-title { color: #ffd54f; }
+    .fake       .result-title { color: #ef9a9a; }
+
+    .result-reason {
+      margin-top: 10px; font-size: 0.79rem;
+      font-family: var(--mono);
+      color: var(--text-muted);
+      background: rgba(0,0,0,0.25);
+      border-radius: 7px; padding: 8px 12px;
+      line-height: 1.5;
+    }
+
+    .result-body { padding: 18px 24px; display: flex; flex-direction: column; gap: 10px; }
+    .res-row {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.84rem; padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .res-row:last-child { border-bottom: none; }
+    .res-key { color: var(--text-muted); font-weight: 500; }
+    .res-val { font-weight: 700; color: var(--text-primary); font-family: var(--mono); font-size: 0.79rem; text-align: right; max-width: 58%; word-break: break-all; }
+
+    .bc-section {
+      background: rgba(0,0,0,0.2);
+      border-top: 1px solid var(--border);
+      padding: 16px 24px;
+    }
+    .bc-label {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--text-muted); margin-bottom: 12px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .hash-pill {
+      display: inline-block;
+      padding: 3px 10px; border-radius: 6px;
+      font-family: var(--mono); font-size: 0.76rem;
+      background: rgba(102,187,106,0.12);
+      border: 1px solid rgba(102,187,106,0.25);
+      color: var(--green-400); word-break: break-all;
+    }
+    .hash-pill.danger {
+      background: rgba(244,67,54,0.1);
+      border-color: rgba(244,67,54,0.25);
+      color: #ef9a9a;
+    }
+
+    .velocity-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 12px; }
+    .vel-box {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 9px; padding: 10px 8px; text-align: center;
+    }
+    .vel-num { font-size: 1.3rem; font-weight: 800; line-height: 1; }
+    .vel-num.ok   { color: var(--green-400); }
+    .vel-num.warn { color: var(--gold); }
+    .vel-num.bad  { color: var(--red); }
+    .vel-lbl { font-size: 0.69rem; color: var(--text-muted); margin-top: 3px; }
+
+    /* ── Result CTA ── */
+    .result-cta { display: flex; gap: 10px; padding: 14px 24px 20px; }
+    .btn-primary-sm {
+      flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 11px 14px;
+      background: linear-gradient(135deg, var(--green-700), var(--green-500));
+      color: white; font-family: 'Inter', sans-serif;
+      font-size: 0.82rem; font-weight: 700;
+      border: none; border-radius: 9px; cursor: pointer;
+      text-decoration: none;
+      box-shadow: 0 5px 16px rgba(76,175,80,0.3);
+      transition: all 0.22s;
+    }
+    .btn-primary-sm:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(76,175,80,0.5); color: white; }
+    .btn-outline-sm {
+      flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 11px 14px;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 600;
+      border: 1px solid var(--border); border-radius: 9px;
+      text-decoration: none; transition: all 0.2s;
+    }
+    .btn-outline-sm:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+
+    /* ── Error ── */
+    .error-box {
+      display: none;
+      margin: 0 20px 20px;
+      background: rgba(244,67,54,0.10);
+      border: 1px solid rgba(244,67,54,0.3);
+      border-radius: 12px; padding: 14px 18px;
+      font-size: 0.84rem; color: #ef9a9a;
+      display: none; align-items: center; gap: 10px;
+    }
+
+    /* ── How it works ── */
+    .how-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px 28px;
+      backdrop-filter: blur(16px);
+      width: 100%; max-width: 520px;
+    }
+    .how-title {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--text-muted); margin-bottom: 18px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .how-steps { display: flex; flex-direction: column; gap: 14px; }
+    .how-step {
+      display: flex; align-items: flex-start; gap: 14px;
+    }
+    .how-num {
+      width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--green-700), var(--green-600));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 800; color: white;
+      box-shadow: 0 4px 10px rgba(46,125,50,0.4);
+    }
+    .how-text { padding-top: 4px; }
+    .how-text strong { font-size: 0.88rem; display: block; margin-bottom: 2px; }
+    .how-text span { font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; }
+
+    @media (max-width: 480px) {
+      .navbar { padding: 12px 16px; }
+      .main   { padding: 36px 14px 80px; gap: 20px; }
+      h1 { font-size: 1.7rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">
+      <div class="brand-leaf">🌿</div>
+      Verda
+    </a>
+    <div class="nav-right">
+      <a href="/camera" class="btn-nav"><i class="bi bi-camera-fill"></i> Live Camera</a>
+      <a href="/" class="btn-nav"><i class="bi bi-arrow-left"></i> Home</a>
+    </div>
+  </nav>
+
+  <div class="main">
+    <!-- Header -->
+    <div class="page-badge">
+      <span class="dot"></span>
+      Blockchain Verification
+    </div>
+    <h1>Scan Product QR Code</h1>
+    <p class="subtitle">Upload a photo of any product's QR code. We'll decode it and instantly verify its authenticity on the blockchain.</p>
+
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tab-upload" onclick="switchTab('upload')">
+        <i class="bi bi-cloud-arrow-up-fill"></i> Upload Image
+      </button>
+      <button class="tab-btn" id="tab-camera" onclick="switchTab('camera')">
+        <i class="bi bi-phone-fill"></i> Use Camera
+      </button>
+    </div>
+
+    <!-- ── Upload Panel ── -->
+    <div class="panel active" id="panel-upload">
+      <div class="upload-card">
+
+        <!-- Drop zone -->
+        <div class="drop-zone" id="dropZone"
+             ondragover="onDragOver(event)"
+             ondragleave="onDragLeave(event)"
+             ondrop="onDrop(event)">
+          <input type="file" id="fileInput" accept="image/*" onchange="onFileChange(event)">
+          <div class="drop-icon">📷</div>
+          <div class="drop-title">Drop your QR code image here</div>
+          <div class="drop-sub">Photo of a product label, QR sticker, or package</div>
+          <div class="drop-browse"><i class="bi bi-folder2-open"></i> Browse Files</div>
+        </div>
+
+        <!-- Preview -->
+        <div class="preview-wrap" id="previewWrap">
+          <img id="previewImg" class="preview-img" src="" alt="QR Preview">
+        </div>
+
+        <!-- Scan animation -->
+        <div class="scan-anim-wrap" id="scanAnim">
+          <div class="scan-rings">
+            <div class="ring"></div>
+            <div class="ring"></div>
+            <div class="ring"></div>
+            <div class="scan-center-icon">⛓</div>
+          </div>
+          <div class="scan-anim-text">Verifying on blockchain…</div>
+          <div class="scan-steps">
+            <div class="step-item" id="step1">
+              <div class="step-dot"></div> Decoding QR code from image
+            </div>
+            <div class="step-item" id="step2">
+              <div class="step-dot"></div> Extracting product ID
+            </div>
+            <div class="step-item" id="step3">
+              <div class="step-dot"></div> Querying blockchain ledger
+            </div>
+            <div class="step-item" id="step4">
+              <div class="step-dot"></div> Generating verification proof
+            </div>
+          </div>
+        </div>
+
+        <!-- Error box -->
+        <div class="error-box" id="errorBox">
+          <i class="bi bi-exclamation-triangle-fill" style="font-size:1.2rem; flex-shrink:0;"></i>
+          <span id="errorMsg">Could not decode QR code.</span>
+        </div>
+
+        <!-- Inline result -->
+        <div class="inline-result" id="inlineResult">
+          <!-- Filled by JS -->
+        </div>
+
+      </div><!-- /upload-card -->
+    </div><!-- /panel-upload -->
+
+    <!-- ── Camera Panel ── -->
+    <div class="panel" id="panel-camera">
+      <div class="upload-card" style="text-align:center; padding: 40px 28px; display:flex; flex-direction:column; align-items:center; gap:16px;">
+        <div style="font-size:3rem;">📸</div>
+        <div style="font-weight:700; font-size:1rem;">Live Camera Scanner</div>
+        <div style="font-size:0.84rem; color:var(--text-muted); line-height:1.6; max-width:300px;">
+          Use your device camera in real-time to scan the QR code directly on the product.
+        </div>
+        <a href="/camera" class="btn-primary-sm" style="max-width:220px; margin-top:6px;">
+          <i class="bi bi-camera-fill"></i> Open Camera Scanner
+        </a>
+      </div>
+    </div><!-- /panel-camera -->
+
+    <!-- How it works -->
+    <div class="how-card">
+      <div class="how-title"><i class="bi bi-info-circle-fill"></i> How It Works</div>
+      <div class="how-steps">
+        <div class="how-step">
+          <div class="how-num">1</div>
+          <div class="how-text">
+            <strong>Upload a QR Photo</strong>
+            <span>Take or upload any photo containing the product's QR code label.</span>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="how-num">2</div>
+          <div class="how-text">
+            <strong>QR Code Decoded</strong>
+            <span>Our engine decodes the QR code inside the image to extract the product ID.</span>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="how-num">3</div>
+          <div class="how-text">
+            <strong>Blockchain Verified</strong>
+            <span>The product ID is checked against our immutable blockchain ledger in real time.</span>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="how-num">4</div>
+          <div class="how-text">
+            <strong>Real or Fake?</strong>
+            <span>You get a full proof: block hash, chain integrity, and scan velocity analysis.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+
+  <script>
+    /* ── Tab switching ── */
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.getElementById('tab-' + tab).classList.add('active');
+      document.getElementById('panel-' + tab).classList.add('active');
+    }
+
+    /* ── Drag & Drop ── */
+    function onDragOver(e) {
+      e.preventDefault();
+      document.getElementById('dropZone').classList.add('dragging');
+    }
+    function onDragLeave(e) {
+      document.getElementById('dropZone').classList.remove('dragging');
+    }
+    function onDrop(e) {
+      e.preventDefault();
+      document.getElementById('dropZone').classList.remove('dragging');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) processFile(file);
+    }
+    function onFileChange(e) {
+      const file = e.target.files[0];
+      if (file) processFile(file);
+    }
+
+    /* ── Main file processor ── */
+    function processFile(file) {
+      resetResult();
+
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        const dataUrl = ev.target.result;
+
+        // Show preview
+        const dropZone    = document.getElementById('dropZone');
+        const previewWrap = document.getElementById('previewWrap');
+        const scanAnim    = document.getElementById('scanAnim');
+        const img         = document.getElementById('previewImg');
+
+        dropZone.style.display    = 'none';
+        previewWrap.style.display = 'flex';
+        img.src = dataUrl;
+
+        // Brief delay then show animation
+        setTimeout(() => {
+          previewWrap.style.display = 'none';
+          scanAnim.style.display    = 'flex';
+          decodeQR(dataUrl);
+        }, 600);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    /* ── Step helpers ── */
+    let stepTimer = null;
+    function activateStep(n) {
+      for (let i = 1; i <= 4; i++) {
+        const el = document.getElementById('step' + i);
+        if (i < n)       el.className = 'step-item done';
+        else if (i === n) el.className = 'step-item active';
+        else              el.className = 'step-item';
+      }
+    }
+
+    /* ── QR decode via jsQR ── */
+    function decodeQR(dataUrl) {
+      activateStep(1);
+
+      const imgEl = new Image();
+      imgEl.onload = function() {
+        const canvas = document.createElement('canvas');
+        canvas.width  = imgEl.naturalWidth;
+        canvas.height = imgEl.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(imgEl, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'dontInvert'
+        });
+
+        if (!code) {
+          // Try with inverted colors for dark QR codes
+          const code2 = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: 'onlyInvert'
+          });
+          if (!code2) {
+            showError('No QR code found in this image. Make sure the QR code is clear and well-lit.');
+            return;
+          }
+          processQRValue(code2.data);
+        } else {
+          processQRValue(code.data);
+        }
+      };
+      imgEl.onerror = () => showError('Could not load image file.');
+      imgEl.src = dataUrl;
+    }
+
+    /* ── Extract product ID from QR URL ── */
+    function processQRValue(qrText) {
+      activateStep(2);
+
+      console.log('QR decoded:', qrText);
+
+      // Extract product ID from URL like http://host/scan/VERDA001
+      let productId = null;
+      try {
+        const url = new URL(qrText);
+        const parts = url.pathname.split('/').filter(Boolean);
+        const scanIdx = parts.indexOf('scan');
+        if (scanIdx !== -1 && parts[scanIdx + 1]) {
+          productId = parts[scanIdx + 1].toUpperCase();
+        }
+      } catch(e) {
+        // Not a URL — try treating raw text as product ID
+        if (/^[A-Z0-9\-_]{4,30}$/i.test(qrText.trim())) {
+          productId = qrText.trim().toUpperCase();
+        }
+      }
+
+      if (!productId) {
+        showError('QR code found but could not extract a valid product ID. Value: ' + qrText);
+        return;
+      }
+
+      setTimeout(() => {
+        activateStep(3);
+        verifyOnBlockchain(productId, qrText);
+      }, 500);
+    }
+
+    /* ── Call backend API ── */
+    function verifyOnBlockchain(productId, rawQr) {
+      fetch('/api/verify/' + encodeURIComponent(productId))
+        .then(r => r.json())
+        .then(data => {
+          activateStep(4);
+          setTimeout(() => {
+            document.getElementById('scanAnim').style.display = 'none';
+            renderResult(productId, data, rawQr);
+          }, 700);
+        })
+        .catch(err => {
+          showError('Verification failed: ' + err.message);
+        });
+    }
+
+    /* ── Render inline result ── */
+    function renderResult(productId, data, rawQr) {
+      const v = data.velocity || {};
+
+      // Determine status
+      let status = 'Fake';
+      let icon   = '❌';
+      let headerClass = 'fake';
+      let reason = 'Product not registered on blockchain';
+
+      if (data.blockchain_valid && data.in_database) {
+        const score = v.threat_score || 0;
+        if (score === 0) {
+          status = 'Authentic'; icon = '✅'; headerClass = 'authentic';
+          reason = '✔ Verified on blockchain — Block #' + (data.block_index ?? '?');
+        } else if (score <= 3) {
+          status = 'Suspicious'; icon = '⚠️'; headerClass = 'suspicious';
+          reason = '⚠️ Unusual scan pattern — ' + (v.last_hour || 0) + ' scans/hr';
+        } else {
+          reason = '❌ High-frequency scan attack — possible counterfeit QR';
+        }
+      } else if (!data.blockchain_valid) {
+        reason = data.message || 'Not registered on blockchain';
+      } else if (!data.in_database) {
+        reason = 'Product ID not found in database';
+      }
+
+      // Velocity classes
+      function velClass(val, warn, bad) {
+        if (val >= bad)  return 'bad';
+        if (val >= warn) return 'warn';
+        return 'ok';
+      }
+
+      const blockHash = data.block_hash
+        ? data.block_hash.substring(0, 16) + '…'
+        : '—';
+      const regAt = data.registered_at
+        ? data.registered_at.substring(0, 19).replace('T', ' ')
+        : '—';
+
+      document.getElementById('inlineResult').innerHTML = `
+        <div class="result-header ${headerClass}">
+          <div class="result-icon">${icon}</div>
+          <div class="result-title">${status === 'Authentic' ? 'Authentic Product' : status === 'Suspicious' ? 'Suspicious Activity' : 'Fake / Not Verified'}</div>
+          <div class="result-reason">${reason}</div>
+        </div>
+
+        <div class="result-body">
+          <div class="res-row">
+            <span class="res-key">Product ID</span>
+            <span class="res-val">${productId}</span>
+          </div>
+          <div class="res-row">
+            <span class="res-key">In Database</span>
+            <span class="res-val" style="color:${data.in_database ? 'var(--green-400)' : 'var(--red)'}">${data.in_database ? '✔ Yes' : '✘ No'}</span>
+          </div>
+          <div class="res-row">
+            <span class="res-key">Blockchain</span>
+            <span class="res-val" style="color:${data.blockchain_valid ? 'var(--green-400)' : 'var(--red)'}">${data.blockchain_valid ? '✔ Registered' : '✘ Not Found'}</span>
+          </div>
+        </div>
+
+        <div class="bc-section">
+          <div class="bc-label"><i class="bi bi-link-45deg" style="color:var(--green-400)"></i> Blockchain Proof</div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div class="res-row" style="border:none; padding:4px 0;">
+              <span class="res-key" style="font-size:0.78rem;">Block Index</span>
+              <span class="res-val">${data.block_index !== null ? '#' + data.block_index : '—'}</span>
+            </div>
+            <div>
+              <div style="font-size:0.72rem; color:var(--text-muted); margin-bottom:5px;">Block Hash</div>
+              <span class="hash-pill ${data.blockchain_valid ? '' : 'danger'}">${blockHash}</span>
+            </div>
+            <div class="res-row" style="border:none; padding:4px 0;">
+              <span class="res-key" style="font-size:0.78rem;">Registered</span>
+              <span class="res-val">${regAt}</span>
+            </div>
+            <div class="res-row" style="border:none; padding:4px 0;">
+              <span class="res-key" style="font-size:0.78rem;">Chain Status</span>
+              <span class="res-val" style="color:${data.chain_valid ? 'var(--green-400)' : 'var(--red)'}">
+                ${data.chain_valid ? '⛓ Intact' : '⛓ Broken!'}
+              </span>
+            </div>
+          </div>
+
+          <div style="margin-top:14px;">
+            <div style="font-size:0.72rem; color:var(--text-muted); margin-bottom:8px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px;">Scan Velocity</div>
+            <div class="velocity-row">
+              <div class="vel-box">
+                <div class="vel-num ${velClass(v.total||0, 20, 50)}">${v.total ?? 0}</div>
+                <div class="vel-lbl">Total</div>
+              </div>
+              <div class="vel-box">
+                <div class="vel-num ${velClass(v.last_hour||0, 5, 10)}">${v.last_hour ?? 0}</div>
+                <div class="vel-lbl">Last Hour</div>
+              </div>
+              <div class="vel-box">
+                <div class="vel-num ${velClass(v.last_5min||0, 3, 5)}">${v.last_5min ?? 0}</div>
+                <div class="vel-lbl">Last 5 min</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="result-cta">
+          <a href="/scan/${productId}" class="btn-primary-sm">
+            <i class="bi bi-shield-check"></i> Full Report
+          </a>
+          <button class="btn-outline-sm" onclick="resetToUpload()">
+            <i class="bi bi-arrow-repeat"></i> Scan Again
+          </button>
+        </div>
+      `;
+      document.getElementById('inlineResult').style.display = 'block';
+    }
+
+    /* ── Error ── */
+    function showError(msg) {
+      document.getElementById('scanAnim').style.display    = 'none';
+      document.getElementById('previewWrap').style.display = 'none';
+      const box = document.getElementById('errorBox');
+      box.style.display = 'flex';
+      document.getElementById('errorMsg').textContent = msg;
+      setTimeout(resetToUpload, 5000);
+    }
+
+    /* ── Reset ── */
+    function resetResult() {
+      document.getElementById('inlineResult').style.display = 'none';
+      document.getElementById('inlineResult').innerHTML = '';
+      document.getElementById('errorBox').style.display     = 'none';
+      document.getElementById('scanAnim').style.display     = 'none';
+      document.getElementById('previewWrap').style.display  = 'none';
+    }
+    function resetToUpload() {
+      resetResult();
+      document.getElementById('dropZone').style.display = '';
+      document.getElementById('fileInput').value = '';
+    }
+  </script>
+
+</body>
+</html>

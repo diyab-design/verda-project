@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verda — Blockchain Product Verification</title>
+  <meta name="description" content="Scan any product QR code — photo or live camera — and instantly verify authenticity using blockchain technology.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green-900: #071a0a;
+      --green-800: #0d2e12;
+      --green-700: #2e7d32;
+      --green-600: #388e3c;
+      --green-500: #4caf50;
+      --green-400: #66bb6a;
+      --green-300: #a5d6a7;
+      --accent:    #00e5ff;
+      --gold:      #ffd54f;
+      --surface:   rgba(255,255,255,0.055);
+      --surface2:  rgba(255,255,255,0.03);
+      --border:    rgba(255,255,255,0.09);
+      --border-g:  rgba(76,175,80,0.28);
+      --text-primary: #eef8ef;
+      --text-muted:   #7aab7d;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--green-900);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Background ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background:
+        radial-gradient(ellipse 100% 65% at 10% 0%,   rgba(46,125,50,0.45) 0%, transparent 55%),
+        radial-gradient(ellipse 70%  55% at 90% 100%, rgba(0,229,255,0.05) 0%, transparent 55%),
+        radial-gradient(ellipse 55%  50% at 55% 40%,  rgba(76,175,80,0.07) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    /* Grid dots */
+    body::after {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image: radial-gradient(circle, rgba(76,175,80,0.15) 1px, transparent 1px);
+      background-size: 44px 44px;
+      pointer-events: none;
+      mask-image: radial-gradient(ellipse 85% 80% at 50% 50%, black 20%, transparent 100%);
+    }
+
+    /* ── Navbar ── */
+    .navbar {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 36px;
+      background: rgba(7,26,10,0.88);
+      backdrop-filter: blur(20px) saturate(1.4);
+      border-bottom: 1px solid var(--border);
+    }
+    .navbar-brand {
+      display: flex; align-items: center; gap: 11px;
+      font-size: 1.15rem; font-weight: 900;
+      color: var(--text-primary); text-decoration: none;
+      letter-spacing: -0.5px;
+    }
+    .brand-leaf {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--green-600), var(--green-400));
+      border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.05rem;
+      box-shadow: 0 0 22px rgba(102,187,106,0.5), 0 0 8px rgba(102,187,106,0.3);
+    }
+    .nav-actions { display: flex; gap: 10px; align-items: center; }
+    .btn-nav {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 18px; border-radius: 9px;
+      font-size: 0.84rem; font-weight: 600;
+      font-family: 'Inter', sans-serif; cursor: pointer;
+      text-decoration: none; transition: all 0.22s;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-primary);
+    }
+    .btn-nav:hover { background: rgba(255,255,255,0.10); color: var(--green-400); border-color: var(--green-500); }
+    .btn-nav-primary {
+      background: linear-gradient(135deg, var(--green-700), var(--green-500));
+      border-color: transparent;
+      box-shadow: 0 4px 16px rgba(76,175,80,0.35);
+      color: white;
+    }
+    .btn-nav-primary:hover { transform: translateY(-1px); box-shadow: 0 7px 24px rgba(76,175,80,0.5); color: white; }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative; z-index: 1;
+      text-align: center;
+      padding: 90px 24px 60px;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(76,175,80,0.10);
+      border: 1px solid rgba(76,175,80,0.28);
+      color: var(--green-400);
+      padding: 6px 18px; border-radius: 100px;
+      font-size: 0.76rem; font-weight: 700;
+      letter-spacing: 0.8px; text-transform: uppercase;
+      margin-bottom: 28px;
+    }
+    .hero-badge .live-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--green-400);
+      animation: blink 1.5s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
+
+    .hero h1 {
+      font-size: clamp(2.4rem, 5.5vw, 4rem);
+      font-weight: 900; letter-spacing: -2px; line-height: 1.05;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #ffffff 30%, var(--green-300) 75%, var(--green-400));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      font-size: 1.05rem; color: var(--text-muted);
+      max-width: 500px; margin: 0 auto 44px;
+      line-height: 1.7;
+    }
+
+    /* ── Scan method cards ── */
+    .scan-methods {
+      display: flex; justify-content: center;
+      gap: 16px; flex-wrap: wrap;
+      margin-bottom: 40px;
+    }
+    .method-card {
+      position: relative;
+      display: flex; flex-direction: column; align-items: center;
+      gap: 14px;
+      padding: 30px 28px 24px;
+      border-radius: 22px;
+      width: 240px;
+      text-decoration: none; color: inherit;
+      transition: all 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .method-card.primary {
+      background: linear-gradient(145deg, rgba(46,125,50,0.3), rgba(76,175,80,0.10));
+      border: 1px solid rgba(76,175,80,0.4);
+      box-shadow: 0 0 0 1px rgba(76,175,80,0.1), inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+    .method-card.secondary {
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    .method-card:hover { transform: translateY(-8px); }
+    .method-card.primary:hover  { box-shadow: 0 24px 50px rgba(0,0,0,0.4), 0 0 40px rgba(76,175,80,0.3); }
+    .method-card.secondary:hover { box-shadow: 0 24px 50px rgba(0,0,0,0.4); border-color: rgba(76,175,80,0.3); }
+
+    .method-badge {
+      position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+      background: linear-gradient(135deg, var(--green-700), var(--green-500));
+      color: white; font-size: 0.68rem; font-weight: 800;
+      padding: 3px 12px; border-radius: 100px;
+      letter-spacing: 0.5px; text-transform: uppercase;
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(46,125,50,0.5);
+    }
+    .method-icon-wrap {
+      width: 68px; height: 68px; border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.9rem;
+      transition: transform 0.3s;
+    }
+    .method-card.primary .method-icon-wrap {
+      background: linear-gradient(135deg, rgba(46,125,50,0.5), rgba(76,175,80,0.2));
+      border: 1px solid rgba(76,175,80,0.4);
+      box-shadow: 0 8px 24px rgba(76,175,80,0.2);
+    }
+    .method-card.secondary .method-icon-wrap {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+    }
+    .method-card:hover .method-icon-wrap { transform: scale(1.1) rotate(-5deg); }
+    .method-name { font-size: 1rem; font-weight: 800; letter-spacing: -0.3px; }
+    .method-desc { font-size: 0.8rem; color: var(--text-muted); text-align: center; line-height: 1.55; }
+    .method-action {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 20px; border-radius: 9px;
+      font-size: 0.8rem; font-weight: 700;
+      margin-top: 4px;
+      transition: all 0.2s;
+    }
+    .method-card.primary .method-action {
+      background: linear-gradient(135deg, var(--green-700), var(--green-500));
+      color: white; box-shadow: 0 4px 14px rgba(76,175,80,0.35);
+    }
+    .method-card.secondary .method-action {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .method-card:hover .method-action { transform: scale(1.03); }
+
+    /* ── Trust badges ── */
+    .trust-row {
+      display: flex; justify-content: center; align-items: center;
+      gap: 28px; flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .trust-item {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.8rem; color: var(--text-muted); font-weight: 500;
+    }
+    .trust-item i { color: var(--green-400); font-size: 0.95rem; }
+
+    /* ── Section ── */
+    .section {
+      position: relative; z-index: 1;
+      max-width: 1200px; margin: 0 auto;
+      padding: 0 36px 80px;
+    }
+    .section-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .section-label {
+      font-size: 0.72rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 1.4px;
+      color: var(--text-muted);
+    }
+    .section-count {
+      font-size: 0.78rem; color: var(--text-muted);
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 4px 12px; border-radius: 100px;
+    }
+
+    /* ── Search ── */
+    .search-wrap {
+      position: relative; z-index: 1;
+      max-width: 540px; margin: 0 auto 52px; padding: 0 36px;
+    }
+    .search-inner {
+      display: flex; align-items: center;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      backdrop-filter: blur(12px);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .search-inner:focus-within {
+      border-color: var(--green-500);
+      box-shadow: 0 0 0 4px rgba(76,175,80,0.12);
+    }
+    .search-icon { padding: 0 16px; color: var(--text-muted); }
+    .search-input {
+      flex: 1; padding: 14px 0;
+      background: transparent; border: none; outline: none;
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif; font-size: 0.92rem;
+    }
+    .search-input::placeholder { color: var(--text-muted); }
+
+    /* ── Product grid ── */
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+      gap: 16px;
+    }
+    .product-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px; padding: 24px 16px 18px;
+      text-align: center;
+      backdrop-filter: blur(12px);
+      transition: all 0.35s cubic-bezier(0.34,1.56,0.64,1);
+      cursor: pointer; text-decoration: none; color: inherit;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .product-card:hover {
+      transform: translateY(-7px);
+      background: rgba(255,255,255,0.09);
+      border-color: rgba(76,175,80,0.45);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.35), 0 0 0 1px rgba(76,175,80,0.18);
+      color: inherit;
+    }
+    .product-qr {
+      width: 108px; height: 108px; object-fit: contain;
+      border-radius: 10px; background: white; padding: 6px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
+    .product-name { font-weight: 700; font-size: 0.88rem; margin-bottom: 4px; }
+    .product-id {
+      font-size: 0.73rem; color: var(--text-muted); margin-bottom: 10px;
+      font-family: var(--mono);
+    }
+    .product-cat {
+      display: inline-block; padding: 3px 10px; border-radius: 100px;
+      font-size: 0.69rem; font-weight: 600; margin-bottom: 14px;
+      background: rgba(76,175,80,0.12); color: var(--green-400);
+      border: 1px solid rgba(76,175,80,0.22);
+    }
+    .product-verify-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      width: 100%; justify-content: center;
+      padding: 9px 0;
+      background: linear-gradient(135deg, var(--green-700), var(--green-600));
+      color: white; font-family: 'Inter', sans-serif;
+      font-size: 0.79rem; font-weight: 700;
+      border: none; border-radius: 9px; cursor: pointer;
+      text-decoration: none;
+      box-shadow: 0 4px 14px rgba(46,125,50,0.4);
+      transition: all 0.2s;
+    }
+    .product-verify-btn:hover { box-shadow: 0 7px 22px rgba(46,125,50,0.6); color: white; }
+
+    /* ── No results ── */
+    .no-results {
+      display: none; text-align: center; padding: 60px 24px; color: var(--text-muted);
+    }
+    .no-results i { font-size: 2.5rem; opacity: 0.4; display: block; margin-bottom: 12px; }
+
+    /* ── Footer ── */
+    footer {
+      position: relative; z-index: 1;
+      text-align: center; padding: 28px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted); font-size: 0.8rem; line-height: 1.8;
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .hero          { animation: fadeUp 0.6s ease both; }
+    .scan-methods  { animation: fadeUp 0.6s 0.1s ease both; }
+    .trust-row     { animation: fadeUp 0.6s 0.2s ease both; }
+    .product-card  { animation: fadeUp 0.45s ease both; }
+    .product-card:nth-child(1)  { animation-delay: 0.00s; }
+    .product-card:nth-child(2)  { animation-delay: 0.05s; }
+    .product-card:nth-child(3)  { animation-delay: 0.10s; }
+    .product-card:nth-child(4)  { animation-delay: 0.15s; }
+    .product-card:nth-child(5)  { animation-delay: 0.20s; }
+    .product-card:nth-child(6)  { animation-delay: 0.25s; }
+    .product-card:nth-child(7)  { animation-delay: 0.30s; }
+    .product-card:nth-child(8)  { animation-delay: 0.35s; }
+    .product-card:nth-child(9)  { animation-delay: 0.40s; }
+    .product-card:nth-child(10) { animation-delay: 0.45s; }
+
+    @media (max-width: 640px) {
+      .navbar { padding: 12px 16px; }
+      .hero   { padding: 60px 16px 44px; }
+      .scan-methods { gap: 12px; }
+      .method-card  { width: 90%; max-width: 300px; }
+      .section, .search-wrap { padding-left: 16px; padding-right: 16px; }
+      .product-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .nav-actions .btn-nav span { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">
+      <div class="brand-leaf">🌿</div>
+      Verda
+    </a>
+    <div class="nav-actions">
+      <a href="/upload-scan" class="btn-nav">
+        <i class="bi bi-qr-code-scan"></i><span>Scan QR</span>
+      </a>
+      <a href="/admin" class="btn-nav btn-nav-primary">
+        <i class="bi bi-grid-3x3-gap-fill"></i><span>Dashboard</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-badge">
+      <span class="live-dot"></span>
+      Blockchain-Powered Verification
+    </div>
+    <h1>Is Your Product<br>Real or Fake?</h1>
+    <p>Scan any product QR code — upload a photo or use your camera — and we'll instantly verify it against the Verda blockchain.</p>
+
+    <!-- Scan method cards -->
+    <div class="scan-methods">
+      <a href="/upload-scan" class="method-card primary">
+        <span class="method-badge">✨ Recommended</span>
+        <div class="method-icon-wrap">📷</div>
+        <div class="method-name">Upload QR Image</div>
+        <div class="method-desc">Take a photo of the product QR code and upload it for verification.</div>
+        <div class="method-action">
+          <i class="bi bi-cloud-arrow-up-fill"></i> Upload & Scan
+        </div>
+      </a>
+      <a href="/camera" class="method-card secondary">
+        <div class="method-icon-wrap">📱</div>
+        <div class="method-name">Live Camera</div>
+        <div class="method-desc">Point your device camera directly at the QR code for real-time scanning.</div>
+        <div class="method-action">
+          <i class="bi bi-camera-fill"></i> Open Camera
+        </div>
+      </a>
+    </div>
+
+    <!-- Trust badges -->
+    <div class="trust-row">
+      <div class="trust-item"><i class="bi bi-shield-fill-check"></i> Blockchain Secured</div>
+      <div class="trust-item"><i class="bi bi-lightning-charge-fill"></i> Instant Results</div>
+      <div class="trust-item"><i class="bi bi-eye-slash-fill"></i> No Data Stored</div>
+      <div class="trust-item"><i class="bi bi-globe2"></i> Works Offline-Ready</div>
+    </div>
+  </section>
+
+  <!-- Search -->
+  <div class="search-wrap">
+    <div class="search-inner">
+      <span class="search-icon"><i class="bi bi-search"></i></span>
+      <input type="text" id="searchInput" class="search-input"
+             placeholder="Search registered products by name or ID…"
+             oninput="filterProducts()">
+    </div>
+  </div>
+
+  <!-- Products -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-label"><i class="bi bi-boxes"></i> &nbsp;Registered Products</span>
+      <span class="section-count" id="countBadge">10 products</span>
+    </div>
+
+    {% set products = [
+      ("VERDA001", "Eco Soap",              "Personal Care"),
+      ("VERDA002", "Bamboo Toothbrush",     "Oral Care"),
+      ("VERDA003", "Organic Shampoo",       "Hair Care"),
+      ("VERDA004", "Reusable Bottle",       "Lifestyle"),
+      ("VERDA005", "Herbal Face Wash",      "Skincare"),
+      ("VERDA006", "Natural Lip Balm",      "Skincare"),
+      ("VERDA007", "Compostable Trash Bags","Household"),
+      ("VERDA008", "Organic Body Lotion",   "Skincare"),
+      ("VERDA009", "Bamboo Cutlery Set",    "Lifestyle"),
+      ("VERDA010", "Reusable Grocery Bag",  "Lifestyle")
+    ] %}
+
+    <div class="product-grid" id="productGrid">
+      {% for pid, name, category in products %}
+      <a href="/scan/{{ pid }}" class="product-card"
+         data-name="{{ name|lower }}" data-id="{{ pid|lower }}">
+        <img src="/static/qrcodes/{{ pid }}.png" alt="QR {{ pid }}" class="product-qr"
+             onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22108%22 height=%22108%22 viewBox=%220 0 108 108%22><rect width=%22108%22 height=%22108%22 fill=%22%23111%22/><text x=%2254%22 y=%2262%22 font-size=%2228%22 text-anchor=%22middle%22 fill=%22%23555%22>QR</text></svg>'">
+        <div class="product-name">{{ name }}</div>
+        <div class="product-id">{{ pid }}</div>
+        <div class="product-cat">{{ category }}</div>
+        <div class="product-verify-btn">
+          <i class="bi bi-shield-check-fill"></i> Verify Now
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+
+    <div class="no-results" id="noResults">
+      <i class="bi bi-search"></i>
+      <p>No products match your search</p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div>🌿 <strong>Verda</strong> Blockchain Product Verification &copy; 2026</div>
+    <div style="margin-top:4px;">Jain University · BTech CSE (Data Science)</div>
+  </footer>
+
+  <script>
+    function filterProducts() {
+      const q = document.getElementById('searchInput').value.toLowerCase().trim();
+      const cards = document.querySelectorAll('.product-card');
+      let visible = 0;
+      cards.forEach(c => {
+        const match = c.dataset.name.includes(q) || c.dataset.id.includes(q);
+        c.style.display = match ? '' : 'none';
+        if (match) visible++;
+      });
+      document.getElementById('noResults').style.display  = visible === 0 ? 'block' : 'none';
+      document.getElementById('countBadge').textContent   = visible + ' product' + (visible !== 1 ? 's' : '');
+    }
+  </script>
+
+</body>
+</html>
